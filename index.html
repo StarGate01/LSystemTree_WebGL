@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+	<head>
+		<title>THREE Tree</title>
+		<link rel="stylesheet" type="text/css" href="style.css">
+		<script type="text/javascript" src="scripts/lib/three.min.js"></script>
+		<script type="text/javascript" src="scripts/lib/OrbitControls.min.js"></script>
+		<script type="text/javascript" src="scripts/initgl.js"></script>
+		<script type="text/javascript" src="scripts/lsengine.js"></script>
+	</head>
+	<body>
+		<h1 id="msg">Loading, don't panic...</h1>
+		<script type="text/javascript">
+			initGL();
+			console.log("Loading textures...");
+			window.setTimeout(function() { var barkTexture = THREE.ImageUtils.loadTexture('images/Bark_0008_diffuse.jpg', undefined, function() { var barkTexture_b = THREE.ImageUtils.loadTexture('images/Bark_0008_normal.jpg', undefined, function() { var leafesTexture = THREE.ImageUtils.loadTexture('images/Leafes_diffuse.png', undefined, function() { var leafesTexture_b = THREE.ImageUtils.loadTexture('images/Leafes_normal.jpg', undefined, function() {
+				console.log("done");
+				var treeRenderDefinitions = [];
+				treeRenderDefinitions["W"] = treeRenderDefinitions["V"] = {
+					type: 0, quality: 9,
+					material: new THREE.MeshPhongMaterial({
+						map: barkTexture,
+						normalMap: barkTexture_b,
+						ambient: 0x666666,
+						diffuse: 0xffffff
+					})
+				};
+				treeRenderDefinitions["K"] = {
+					type: 1, quality: 7,
+					material: new THREE.MeshPhongMaterial({
+						map: leafesTexture,
+						normalMap: leafesTexture_b,
+						ambient: 0x666666,
+						diffuse: 0xffffff,
+						transparent: true
+					})
+				};
+				var treeDefaults = [];
+				treeDefaults["W"] = treeDefaults["V"] = {length: 15, r1: 1, r2: 1};
+				treeDefaults["K"] = {r: 15};
+				treeDefaults["~"] = treeDefaults["#"] = treeDefaults["+"] = {a: (30/180)*Math.PI};
+				treeDefaults["*"] = treeDefaults["$"] = treeDefaults["-"] = {a: -(30/180)*Math.PI};
+				treeDefaults["["] = treeDefaults["]"] = null;
+				var treeFunctionDefinitions = []
+				treeFunctionDefinitions[0] = function(p) {  //sizeToIteration
+					return {length: p.defaults.length, r1: p.defaults.r1 * (p.age + 2), r2: p.defaults.r2 * (p.age + 2)}; 
+				};
+				treeFunctionDefinitions[1] = function(p) {  //sizeMaxIteration
+					return {length: p.defaults.length, r1: p.defaults.r1*(p.options.iterations + 2), r2: p.defaults.r2 * (p.options.iterations + 2)}; 
+				};
+				treeFunctionDefinitions[2] = function(p) {  //sizeToIterationCone
+					return {length: p.defaults.length, r1: p.defaults.r1 * (p.age + 2), r2: p.defaults.r2 * (p.age + 1)}; 
+				};
+				treeFunctionDefinitions[3] = function(p) {  //sizeToIterationConeSharp
+					return {length: p.defaults.length*2, r1: p.defaults.r1 * (p.age + 2), r2: p.defaults.r2 * (p.age)}; 
+				};
+				treeFunctionDefinitions[4] = function(p) {  //biggerAlpha
+					return {a: p.defaults.a * 2 + ((Math.random() * 2 ) - 1) * 0.4}; 
+				};
+				treeFunctionDefinitions[5] = function(p) {  //smallerAlpha
+					return {a: p.defaults.a / 2 + ((Math.random() * 2) -1 ) * 0.2}; 
+				};
+				treeFunctionDefinitions[6] = function(p) {  //litteRandomAlpha
+					return {a: ((Math.random() * 2) - 1) * 0.05}; 
+				};
+				treeFunctionDefinitions[7] = function(p) {  //randomRadius
+					return {r: p.defaults.r * (Math.random() + 1)}; 
+				};
+				scene.add(LSEngine.generate({
+					startPosition: new THREE.Vector3(0, 0, 0),
+					startRotation: new THREE.Euler(0, 0, Math.PI/2, "XYZ"),
+					iterations: 9,
+					symbol: "V(1)W(2)K(7)",
+					rules: [
+						{from: "V", cond: function(p) { return true; }, to: [
+							{
+								newsymbols: "W(1)~(6)+(6)$(6)V(1)", 
+								probability: 1
+							}
+						]},
+						{from: "K", cond: function(p){ return (p.iterations < p.options.iterations-1); }, to: [
+							{
+								newsymbols: "W(2)~(6)+(6)$(6)K(7)", 
+								probability: 0.6
+							},
+							{
+								newsymbols: "W(0)[~+W(2)K(7)][~-W(2)K(7)][*W(2)K(7)]", 
+								probability: 0.25
+							},
+							{
+								newsymbols: "W(0)[~-W(2)K(7)][*W(2)K(7)]", 
+								probability: 0.05
+							},
+							{
+								newsymbols: "W(0)[~+W(2)K(7)][*W(2)K(7)]", 
+								probability: 0.05
+							},
+							{
+								newsymbols: "W(0)[~+W(2)K(7)][~-W(2)K(7)]", 
+								probability: 0.05
+							}
+						]},
+						{from: "K", cond: function(p){ return (p.iterations == p.options.iterations-1); }, to: [
+							{
+								newsymbols: "W(0)[~(4)+(4)W(3)K(7)][~(4)-(4)W(3)K(7)][*(4)+(4)W(3)K(7)][*(4)-(4)W(3)K][W(3)K(7)][~(5)+(5)W(3)K(7)][~(5)-(5)W(3)K(7)][*(5)+(5)W(3)K(7)][*(5)-(5)W(3)K][W(3)K(7)]", 
+								probability: 1
+							}
+						]}
+					],
+					defaults: treeDefaults,
+					settings: {wind: new THREE.Vector3(3, 0, 5)},
+					renderDefinitions: treeRenderDefinitions,
+					functionDefinitions: treeFunctionDefinitions
+				}));
+				console.log("All trees done");
+				document.getElementById("msg").remove();
+				render();
+			}); }); }); }); }, 1);
+		</script>
+	</body>
+</html>				
